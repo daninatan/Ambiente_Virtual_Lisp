@@ -36,12 +36,12 @@ NOTE
 
 (defun MAIN()
   (let ((ambiente (list 0 0)) (organismos nil) (recursos nil))
-  (menu_principal ambiente organismos recursos))
-)
+    (multiple-value-setq (ambiente organismos recursos)
+      (menu_principal ambiente organismos recursos))))
 
 (defun menu_principal(ambiente organismos recursos)
   (let ((escolha 0))
-    (loop while(not (equal escolha 8))
+    (loop while (not (equal escolha 8))
       do
         (format t "~%~%~%1 - Inicializar ambiente~%")
         (format t "2 - Adicionar Organismo~%")
@@ -53,101 +53,95 @@ NOTE
         (format t "8 - Sair~%~%")
         (format t "Escolha uma opção: ")
         (setf escolha (read))
-        (setf (values ambiente organismos recursos)
-        (processar_escolha escolha ambiente organismos recursos))
-    )
-  )
-)
-
-
+        (multiple-value-setq (ambiente organismos recursos)
+              (processar_escolha escolha ambiente organismos recursos)))
+    (values ambiente organismos recursos)))
 
 (defun processar_escolha(escolha ambiente organismos recursos)
   (cond 
-    (
-      (equal escolha 1) (inicializar_ambiente ambiente)
-    )
-    (
-      (equal escolha 2) (adicionar_organismos organismos) 
-    )
-    (
-      (equal escolha 3) (adicionar_recursos recursos ambiente) 
-    )
-    (
-      (equal escolha 4) (format t "4~%") 
-    )
-    (
-      (equal escolha 5) (format t "5~%") 
-    )
-    (
-      (equal escolha 6) (estatisticas organismos recursos ambiente) 
-    )
-    (
-      (equal escolha 7) (resetar) 
-    )
-    (
-      (equal escolha 8) (format t "Saindo do programa...")
-    )
-  )
-)
+    ((equal escolha 1) 
+     (inicializar_ambiente ambiente organismos recursos))
+    ((equal escolha 2) 
+     (adicionar_organismos ambiente organismos recursos))
+    ((equal escolha 3) 
+     (adicionar_recursos ambiente organismos recursos))
+    ((equal escolha 4) 
+     (format t "4~%") 
+     (values ambiente organismos recursos))
+    ((equal escolha 5) 
+     (format t "5~%")
+     (values ambiente organismos recursos))
+    ((equal escolha 6) 
+     (estatisticas ambiente organismos recursos)
+     (values ambiente organismos recursos))
+    ((equal escolha 7) 
+     (resetar))
+    ((equal escolha 8) 
+     (format t "Saindo do programa...")
+     (values ambiente organismos recursos))
+    (t 
+     (format t "Opção inválida!")
+     (values ambiente organismos recursos))))
 
-(
-  defun inicializar_ambiente(ambiente)
-    (format t "~%~%Qual o tamanho? (ex: 100)  ")
-    (setf (nth 0 ambiente) (read))
-    (format t "~%Qual a capacidade máxima? (ex: 50) ")
-    (setf (nth 1 ambiente) (read))
- )
+(defun inicializar_ambiente(ambiente organismos recursos)
+  (format t "~%~%Qual o tamanho? (ex: 100)  ")
+  (setf (first ambiente) (read))
+  (format t "~%Qual a capacidade máxima? (ex: 50) ")
+  (setf (second ambiente) (read))
+  (format t "~%Ambiente inicializado com sucesso!~%")
+  (values ambiente organismos recursos))
 
-
-(
-  defun adicionar_organismos(organismos)
-    (format t "~%~%Qual a quantidade?  ")
-    (setf quantidade (read))
+(defun adicionar_organismos(ambiente organismos recursos)
+  (format t "~%~%Qual a quantidade?  ")
+  (let ((quantidade (read)))
     (dotimes (i quantidade)
-      (gerar_genes)
-    ) 
- )
+      (let ((novo-organismo (gerar_genes)))
+        (setf organismos (append organismos (list novo-organismo)))))
+    (format t "~A organismos adicionados!~%" quantidade)
+    (values ambiente organismos recursos)))
 
-(
-  defun gerar_genes()
-    (setf gene1 (random 100))
-    (print gene1)
-)
+(defun gerar_genes()
+  (let ((gene1 (random 100)))
+    (format t "Gene gerado: ~A~%" gene1)
+    gene1))
 
-;Todas as variáveis se tornam NIL para resetar a simulação
-(defun resetar(organismos ambiente recursos)
-  (setf organismos nil)
-  (setf recursos nil)
-  (setf ambiente nil)
-)
+(defun resetar()
+  (let ((ambiente (list 0 0))
+        (organismos nil)
+        (recursos nil))
+    (format t "Simulação resetada!~%")
+    (values ambiente organismos recursos)))
 
-(
-  defun adicionar_recursos(recursos ambiente)
-  (format t "~%~%Qual a quantidade? ")
-  (setf quantidade (read))
-  (dotimes (i quantidade)
-  (setf x (random (nth 0 ambiente)))
-  (setf y (random (nth 0 ambiente)))
-  (push (list x y) recursos))
-)
+(defun adicionar_recursos(ambiente organismos recursos)
+  (if (= (first ambiente) 0)
+      (progn
+        (format t "~%Erro: Ambiente não foi inicializado!~%")
+        (values ambiente organismos recursos))
+      (progn
+        (format t "~%~%Qual a quantidade? ")
+        (let ((quantidade (read)))
+          (dotimes (i quantidade)
+            (let ((x (random (first ambiente)))
+                  (y (random (first ambiente))))
+              (setf recursos (append recursos (list (list x y))))))
+          (format t "~A recursos adicionados!~%" quantidade)
+                  (if (>= (length recursos) 3)
+                      (subseq recursos 0 3)
+                      recursos))
+          (values ambiente organismos recursos)))))
 
-(
-  defun estatisticas(organismos recursos ambiente)
-    (format t "~%~%Ambiente: ~%")
-    (format t "Tamanho:~A  Capacidade:~A~%~%" (nth 0 ambiente) (nth 1 ambiente))
-    (format t "~%~%Organismos: ~%")
-    (dolist (organismo organismos)
-      (format t "~A~%" organismo)
-    )
-    (format t "~%~%Recursos: ~%")
-    (dolist (recurso recursos)
-      (format t "~A~%" recurso)
-    )
-)
-
-
-
-
-
-
-
+(defun estatisticas(ambiente organismos recursos)
+  (format t "~%~%=== ESTATÍSTICAS ===~%")
+  (format t "~%Ambiente:~%")
+  (format t "  Tamanho: ~A~%" (first ambiente))
+  (format t "  Capacidade: ~A~%" (second ambiente))
+  (format t "~%Organismos (~A total):~%" (length organismos))
+  (if organismos
+      (dolist (organismo organismos)
+        (format t "  Gene: ~A~%" organismo))
+      (format t "  Nenhum organismo adicionado~%"))
+  (format t "~%Recursos (~A total):~%" (length recursos))
+  (if recursos
+      (dolist (recurso recursos)
+        (format t "  Posição: (~A, ~A)~%" (first recurso) (second recurso)))
+      (format t "  Nenhum recurso adicionado~%")))
