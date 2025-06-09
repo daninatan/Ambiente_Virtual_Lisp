@@ -31,10 +31,9 @@
         (format t "2 - Adicionar Organismo~%")
         (format t "3 - Adicionar Recursos~%")
         (format t "4 - Executar Simulação~%")
-        (format t "5 - Ver Estado atual~%")
-        (format t "6 - Ver Estatísticas~%")
-        (format t "7 - Resetar Simulação~%")
-        (format t "8 - Sair~%~%")
+        (format t "5 - Ver Estatísticas~%")
+        (format t "6 - Resetar Simulação~%")
+        (format t "7 - Sair~%~%")
         (format t "Escolha uma opção: ")
         (setf escolha (read))
         (multiple-value-setq (ambiente organismos recursos)
@@ -53,14 +52,11 @@
      (executar_simulacao ambiente organismos recursos)
      (values ambiente organismos recursos))
     ((equal escolha 5) 
-     (format t "5~%")
-     (values ambiente organismos recursos))
-    ((equal escolha 6) 
      (estatisticas ambiente organismos recursos)
      (values ambiente organismos recursos))
-    ((equal escolha 7) 
+    ((equal escolha 6) 
      (resetar))
-    ((equal escolha 8) 
+    ((equal escolha 7) 
      (format t "Saindo do programa...")
      (values ambiente organismos recursos))
     (t 
@@ -70,8 +66,6 @@
 (defun inicializar_ambiente(ambiente organismos recursos)
   (format t "~%~%Qual o tamanho? (ex: 100)  ")
   (setf (first ambiente) (read))
-  (format t "~%Qual a capacidade máxima? (ex: 50) ")
-  (setf (second ambiente) (read))
   (format t "~%Ambiente inicializado com sucesso!~%")
   (values ambiente organismos recursos))
 
@@ -81,12 +75,12 @@
     (dotimes (i quantidade)
       (let ((novo-organismo (gerar_organismo ambiente)))
         (setf organismos (append organismos (list novo-organismo))))
-        (setf (nth 3 ambiente) (+ 1 (nth 3 ambiente))))
+        (setf (nth 2 ambiente) (+ 1 (nth 2 ambiente))))
     (format t "~A organismos adicionados!~%" quantidade)
     (values ambiente organismos recursos)))
 
 (defun gerar_organismo(ambiente)
-  (let ((organismo nil) (id (+ 1 (nth 3 ambiente))) (genes nil) (posicao (list (random (nth 0 ambiente)) (random (nth 1 ambiente)))))
+  (let ((organismo nil) (id (+ 1 (nth 2 ambiente))) (genes nil) (posicao (list (random (nth 0 ambiente)) (random (nth 0 ambiente)))))
     (setf genes (gerar_genes))
     (setf organismo (list id genes posicao 50)) ;50 seria a energia base, que todos os indivíduos nascem
     organismo
@@ -117,7 +111,7 @@
         (values ambiente organismos recursos))
       (progn
         (format t "~%~%Qual a quantidade? ")
-        (let ((quantidade (read)) (id (nth 2 ambiente)))
+        (let ((quantidade (read)) (id (nth 1 ambiente)))
           (dotimes (i quantidade)
             (let ((x (random (first ambiente)))
                   (y (random (first ambiente))))
@@ -127,14 +121,13 @@
                   (if (>= (length recursos) 3)
                       (subseq recursos 0 3)
                       recursos)
-                  (setf (nth 2 ambiente) (+ quantidade (nth 2 ambiente))))
+                  (setf (nth 1 ambiente) (+ quantidade (nth 1 ambiente))))
           (values ambiente organismos recursos))))
 
 (defun estatisticas(ambiente organismos recursos)
   (format t "~%~%=== ESTATÍSTICAS ===~%")
   (format t "~%Ambiente:~%")
   (format t "  Tamanho: ~A~%" (first ambiente))
-  (format t "  Capacidade: ~A~%" (second ambiente))
   (format t "~%Organismos (~A total):~%" (length organismos))
   (if organismos
       (dolist (organismo organismos)
@@ -145,6 +138,32 @@
       (dolist (recurso recursos)
         (format t "ID: ~A  Posição: (~A, ~A)~%" (first recurso) (second recurso) (third recurso)))
       (format t "  Nenhum recurso adicionado~%")))
+
+;Função de reprodução entre organismos
+(defun reproduzir(ambiente organismo1 organismo2)
+  (let (organismo3 (list 0 0 0 0) (id (+ 1 (nth 2 ambiente)) (forca 0) (eficiencia 0) (sexo 0)))
+    (setf (nth 2 ambiente) (+ 1 (nth 2 ambiente)))
+    (setf taxa_mutacao = 3) ;Define uma taxa de mutacao
+    (setf quantidade_mutacao 8) ;Define o quanto o gene irá mudar
+    (setf mutacao (random 10)) ;Sorteia um numero para verificar se haverá mutação
+    (setf gene_mutacao (random 2)) ;Escolhe qual gene irá sofrer mutação (0 ou 1)
+    (setf sinal_mutacao (random 2)) ;Escolhe se a mutação será positiva ou negativa
+    (setf sexo (random 2))
+    (setf organismo3 (list (/ 2 (+ (first organismo1) (first organismo2))) (/ 2 (+ (second organismo1) (second organismo2))) sexo))
+    (if (equals sinal_mutacao 1)
+      (setf sinal_mutacao 1)
+      (setf sinal_mutacao -1)
+    )
+
+    (if < mutacao taxa_mutacao
+      (progn
+       (setf nova_quantidade_mutacao (* nova_quantidade_mutacao sinal_mutacao))
+       (setf (nth gene_mutacao organismo3) (+ nova_quantidade_mutacao (nth gene_mutacao organismo3)))
+      )
+    )
+    organismo3
+  )
+)
 
 (defun executar_simulacao (ambiente organismos recursos)
   (let ((rodadas 0))
