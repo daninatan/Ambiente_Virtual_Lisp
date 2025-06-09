@@ -165,12 +165,44 @@
   )
 )
 
+;Função para executar simulação
+;Em cada iteração, o organismo pode procurar por recursos ou reproduzir | 0 = Reproducao, 1 = Procurar recurso
+;Reproduzir gasta 10 de energia
+;Procurar por recurso gasta 
+;   10 - Se eficiencia <= 40
+;   7 - Se eficiencia <= 80 && > 40
+;   5 - Se eficiencia <= 100 && > 80
+;O organismo sempre vai no recurso mais proximo
+;Se dois ou mais individuos buscarem pelo mesmo recurso, eles devem competir, o com a maior força ganha o recurso
+;Cada recurso aumenta em 8 a energia 
+;Se um individuo tiver energia <= 10, obrigatoriamente deve procurar recurso 
 (defun executar_simulacao (ambiente organismos recursos)
   (let ((rodadas 0))
     (format t "~%~%Quantas rodadas? ")
     (setf rodadas (read))
     (dotimes (i rodadas)
-      (format t "~%Rodada ~A" (+ i 1))
+      (let (decisao_organismos 0) (recurso_organismos nil) (reproducao_organismos nil)
+        (let ((decisao nil))
+          (dolist (organismo organismos)
+            (if (<= 10 (nth 3 organismo))
+              (setf decisao 1)
+              (setf decisao (random 2))
+            )
+            (setf decisao_organismos (append decisao_organismos (list decisao)))
+          )
+          (dotimes (i (length decisao_organismos))
+            (if (equals (nth i decisao_organismos) 0)
+              (progn ; Código macho busca fêmea mais próxima que quer reproduzir 
+
+              ) 
+              (progn ; Código busca recurso mais próximo
+
+           
+              )             
+            )
+          )
+        )
+      )
     )
   ) 
 )
