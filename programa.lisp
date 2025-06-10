@@ -212,7 +212,7 @@
 
 
 
-;; Calcula distância Euclidiana
+;; Calcula distância
 (defun distancia (p1 p2)
     (sqrt (+ (expt (- (first p1) (first p2)) 2)
              (expt (- (second p1) (second p2)) 2))))
@@ -230,77 +230,120 @@
 ;Se dois ou mais individuos buscarem pelo mesmo recurso, eles devem competir, o com a maior força ganha o recurso
 ;Cada recurso aumenta em 8 a energia 
 ;Se um individuo tiver energia <= 10, obrigatoriamente deve procurar recurso 
-;; Função auxiliar para calcular a distância entre dois pontos
 
 (defun executar_simulacao (ambiente organismos recursos)
+  (format t "~%===Estado Inicial===")
+  (estatisticas ambiente organismos recursos)
   (format t "~%Digite o número de rodadas: ")
   (let ((rodadas (read))
-        (org-atuais organismos)
+        (organismos-atuais organismos)
         (rec-atuais recursos))
     (loop for r from 1 to rodadas do
-      (format t "~%=== Rodada ~A ===~%" r)
-      
-      (let ((novos-org nil))
-        ;; Para cada organismo
-        (dolist (org org-atuais)
-          (let* ((energia    (fourth org))
-                 (genes      (second org))
-                 (sexo       (nth 2 genes))
-                 (eficiencia (second genes))
-                 (decisao    (if (<= energia 10) 1 (random 2))))
+      (format t "~%=== RODADA ~A ===" r)
+      (let ((decisoes nil))
+        (dolist (organismo organismos-atuais)
+          (if (<= (fourth organismo) 10)
+            (setf decisoes (append decisoes (list 1)))
+            (setf decisoes (append decisoes (list (random 2))))))
+        
+        (let ((organismo-recurso nil) (recursos-competidos nil))
+          (dotimes (i (length organismos-atuais))
+            (if (= 1 (nth i decisoes))
+              (progn
+                (decf (fourth (nth i organismos-atuais))
+                      (cond ((<= (second (second (nth i organismos-atuais))) 40) 10)
+                            ((<= (second (second (nth i organismos-atuais))) 80) 7)
+                            (t 5)))
+                
+                (let ((recurso_mais_proximo (nth 0 rec-atuais)) 
+                      (distancia_mais_proxima (distancia (third (nth i organismos-atuais)) 
+                                                        (second (nth 0 rec-atuais)))))
+                  (dotimes (j (length rec-atuais))
+                    (let ((distancia_organismo_recurso 
+                           (distancia (third (nth i organismos-atuais)) 
+                                    (second (nth j rec-atuais)))))
+                      (if (< distancia_organismo_recurso distancia_mais_proxima)
+                        (progn
+                          (setf distancia_mais_proxima distancia_organismo_recurso)
+                          (setf recurso_mais_proximo (nth j rec-atuais))))))
+                  
+                  (push (list (first recurso_mais_proximo) (nth i organismos-atuais)) organismo-recurso)
+                  (push recurso_mais_proximo recursos-competidos)))))
+          
+          (setf recursos-competidos (remove-duplicates recursos-competidos :test #'equal))
+          (setf rec-atuais (set-difference rec-atuais recursos-competidos :test #'equal))
+
+          (let ((organismos-por-recurso nil) (organismos-para-competir nil) (id nil))
+            (dolist (recurso recursos-competidos)
+              (setf id (first recurso))
+              (setf organismos-para-competir nil) ;; Reset da lista para cada recurso
+              (dotimes (j (length organismo-recurso))
+                (if (= id (first (nth j organismo-recurso)))
+                  (push (second (nth j organismo-recurso)) organismos-para-competir)))
+              
+              (when organismos-para-competir ;; Só adiciona se houver organismos
+                (push organismos-para-competir organismos-por-recurso)))
             
-            (if (= decisao 1)
-                ;; Buscar recurso
-                (let ((melhor nil) (dmin nil))
-                  (dolist (rc rec-atuais)
-                    (let* ((pos-org (third org))
-                           (pos-rc  (second rc))
-                           (d       (distancia pos-org pos-rc)))
-                      (when (or (not dmin) (< d dmin))
-                        (setf dmin d
-                              melhor rc))))
+            ;; Dando a energia para o organismo mais forte de cada lista
+            (dolist (lista-organismos organismos-por-recurso)
+              (when lista-organismos ;; Verifica se a lista não está vazia
+                (let ((indice_organismo_mais_forte 0))
+                  (dotimes (i (length lista-organismos))
+                    (if (> (first (second (nth i lista-organismos))) 
+                           (first (second (nth indice_organismo_mais_forte lista-organismos))))
+                      (setf indice_organismo_mais_forte i)))
                   
-                  ;; Gasta energia pela tentativa de buscar (independente de encontrar)
-                  (decf energia (cond ((<= eficiencia 40) 10)
-                                     ((<= eficiencia 80) 7)
-                                     (t 5)))
-                  
-                  ;; Se encontrou recurso, consome e ganha energia
-                  (when melhor
-                    (setf rec-atuais (remove melhor rec-atuais :test #'equal))
-                    (incf energia 8))
-                  
-                  (setf (fourth org) energia))
-              ;; Reproduzir
-              (when (= sexo 1)
-                (let ((fem  nil) (dmin2 nil))
-                  (dolist (pot org-atuais)
-                    (let* ((g2  (second pot))
-                           (s2  (nth 2 g2))
-                           (e2  (fourth pot)))
-                      (when (and (= s2 0) (>= e2 20))
-                        (let ((d2 (distancia (third org) (third pot))))
-                          (when (or (not dmin2) (< d2 dmin2))
-                            (setf dmin2 d2
-                                  fem pot))))))
-                  (when fem
-                    (let ((filho (reproduzir ambiente org fem)))
-                      (push filho novos-org)
-                      (decf (fourth org) 10)
-                      (decf (fourth fem) 10))))))))
+                  (let ((id_organismo_mais_forte (first (nth indice_organismo_mais_forte lista-organismos))))
+                    (dotimes (i (length organismos-atuais))
+                      (if (= id_organismo_mais_forte (first (nth i organismos-atuais)))
+                        (incf (fourth (nth i organismos-atuais)) 8)))))))) 
         
-        ;; Atualiza organismos e recursos no fim da rodada
-        (setf org-atuais (append
-                           (remove-if (lambda (o) (<= (fourth o) 0))
-                                      org-atuais)
-                           novos-org))
+        ;; Reprodução
+        (let ((quantidade_de_organismos (length organismos-atuais)))
+          (dotimes (i quantidade_de_organismos)
+              (when (and (numberp (nth i decisoes))
+                  (= 0 (nth i decisoes))
+                  (= 1 (third (second (nth i organismos-atuais)))))
+              (let ((femea_mais_proxima nil) 
+                    (distancia_femea_mais_proxima most-positive-fixnum) 
+                    (distancia_atual nil) 
+                    (filho_gerado nil) 
+                    (indice_femea -1))
+                (dotimes (j quantidade_de_organismos)
+                  (if (and (= 0 (third (second (nth j organismos-atuais)))) ;; Fêmea
+                           (= 0 (nth j decisoes))) ;; Não foi buscar comida
+                    (progn
+                      (setf distancia_atual (distancia (third (nth i organismos-atuais)) 
+                                                     (third (nth j organismos-atuais))))
+                      (if (< distancia_atual distancia_femea_mais_proxima)
+                        (progn
+                          (setf distancia_femea_mais_proxima distancia_atual)
+                          (setf femea_mais_proxima (nth j organismos-atuais))
+                          (setf indice_femea j))))) 
+                  )
+                
+                (when (and femea_mais_proxima (>= indice_femea 0))
+                  (decf (fourth (nth i organismos-atuais)) 10)
+                  (decf (fourth (nth indice_femea organismos-atuais)) 10)
+                  (setf filho_gerado (reproduzir ambiente femea_mais_proxima (nth i organismos-atuais))) 
+                  (format t "~% ~A ~%" filho_gerado)
+                  (setf organismos-atuais (append organismos-atuais (list filho_gerado))) 
+                  )
+                )))) 
+
         
-        ;; Atualiza recursos adicionando novos (chamando sua função)
+        ;; Remove organismos mortos (energia <= 0)
+        (setf organismos-atuais 
+              (remove-if (lambda (organismo) (<= (fourth organismo) 0)) organismos-atuais))
+        
+        ;; Adiciona recursos para próxima rodada
         (multiple-value-setq (ambiente rec-atuais)
-          (adicionar_recursos_rodada ambiente rec-atuais)))
-      
-      (format t "~%Fim da rodada ~A. Organismos vivos: ~A, Recursos restantes: ~A~%" 
-              r (length org-atuais) (length rec-atuais)))
-    
-    ;; Retorna os valores atualizados após todas as rodadas
-    (values ambiente org-atuais rec-atuais)))
+          (adicionar_recursos_rodada ambiente rec-atuais))
+
+        ;; Fim da rodada
+        (estatisticas ambiente organismos-atuais rec-atuais))))
+
+    (values ambiente organismos-atuais rec-atuais)))
+
+
+
