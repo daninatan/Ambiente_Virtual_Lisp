@@ -12,7 +12,7 @@
 
 ;Organismo
 ;IdOrganismo, Genes, Posição, Energia 
-;Genes - Força (Para competir por comida), Eficiencia para achar alimento, Sexo 
+;Genes - Força (Para competir por comida), Eficiencia para achar alimento, Sexo(1 - Masculino, 0 - Feminino)
 
 ;Recurso
 ;IdRecurso, Posição
@@ -25,7 +25,7 @@
 
 (defun menu_principal(ambiente organismos recursos)
   (let ((escolha 0))
-    (loop while (not (equal escolha 8))
+    (loop while (not (equal escolha 7))
       do
         (format t "~%~%~%1 - Inicializar ambiente~%")
         (format t "2 - Adicionar Organismo~%")
@@ -49,8 +49,7 @@
     ((equal escolha 3) 
      (adicionar_recursos ambiente organismos recursos))
     ((equal escolha 4) 
-     (executar_simulacao ambiente organismos recursos)
-     (values ambiente organismos recursos))
+     (executar_simulacao ambiente organismos recursos))  
     ((equal escolha 5) 
      (estatisticas ambiente organismos recursos)
      (values ambiente organismos recursos))
@@ -82,7 +81,7 @@
 (defun gerar_organismo(ambiente)
   (let ((organismo nil) (id (+ 1 (nth 2 ambiente))) (genes nil) (posicao (list (random (nth 0 ambiente)) (random (nth 0 ambiente)))))
     (setf genes (gerar_genes))
-    (setf organismo (list id genes posicao 50)) ;50 seria a energia base, que todos os indivíduos nascem
+    (setf organismo (list id genes posicao 30)) ;50 seria a energia base, que todos os indivíduos nascem
     organismo
   )
 )
@@ -98,7 +97,7 @@
 ) 
 
 (defun resetar()
-  (let ((ambiente (list 0 0))
+  (let ((ambiente (list 0 0 0))
         (organismos nil)
         (recursos nil))
     (format t "Simulação resetada!~%")
@@ -115,7 +114,7 @@
           (dotimes (i quantidade)
             (let ((x (random (first ambiente)))
                   (y (random (first ambiente))))
-              (setf recursos (append recursos (list (list (+ 1 id) x y))))
+              (setf recursos (append recursos (list (list (+ 1 id) (list x y)))))
               (setf id (+ 1 id))))
           (format t "~A recursos adicionados!~%" quantidade)
                   (if (>= (length recursos) 3)
@@ -123,6 +122,21 @@
                       recursos)
                   (setf (nth 1 ambiente) (+ quantidade (nth 1 ambiente))))
           (values ambiente organismos recursos))))
+
+
+(defun adicionar_recursos_rodada(ambiente recursos)
+  (let ((quantidade (round (/ (first ambiente) 10)))
+      (id (second ambiente)))
+            (dotimes (i quantidade)
+              (let ((x (random (first ambiente)))
+                    (y (random (first ambiente))))
+                (setf recursos (append recursos (list (list (+ 1 id) (list x y)))))
+                (setf id (+ 1 id))))
+                    (if (>= (length recursos) 3)
+                        (subseq recursos 0 3)
+                        recursos)
+                    (setf (nth 1 ambiente) (+ quantidade (nth 1 ambiente)))
+    (values ambiente recursos)))
 
 (defun estatisticas(ambiente organismos recursos)
   (format t "~%~%=== ESTATÍSTICAS ===~%")
@@ -136,37 +150,77 @@
   (format t "~%Recursos (~A total):~%" (length recursos))
   (if recursos
       (dolist (recurso recursos)
-        (format t "ID: ~A  Posição: (~A, ~A)~%" (first recurso) (second recurso) (third recurso)))
+        (format t "ID: ~A  Posição: (~A, ~A)~%" (first recurso) (first (second recurso)) (second (second recurso))))
       (format t "  Nenhum recurso adicionado~%")))
 
 ;Função de reprodução entre organismos
-(defun reproduzir(ambiente organismo1 organismo2)
-  (let (organismo3 (list 0 0 0 0) (id (+ 1 (nth 2 ambiente)) (forca 0) (eficiencia 0) (sexo 0)))
+(defun reproduzir (ambiente organismo1 organismo2)
+  (let ((organismo3 (list 0 0 0 0)) 
+        (id (+ 1 (nth 2 ambiente))) 
+        (genes1 (second organismo1))  ; Pega os genes do organismo1
+        (genes2 (second organismo2))  ; Pega os genes do organismo2
+        (pos1 (third organismo1))     ; Posição do organismo1
+        (pos2 (third organismo2))     ; Posição do organismo2
+        (forca 0) 
+        (eficiencia 0) 
+        (sexo 0)
+        (taxa_mutacao 3)
+        (quantidade_mutacao 8)
+        (mutacao (random 10))
+        (gene_mutacao (random 2))
+        (sinal_mutacao (random 2))
+        (nova_quantidade_mutacao 0))
+    
+    ; Atualiza o último ID no ambiente
     (setf (nth 2 ambiente) (+ 1 (nth 2 ambiente)))
-    (setf taxa_mutacao = 3) ;Define uma taxa de mutacao
-    (setf quantidade_mutacao 8) ;Define o quanto o gene irá mudar
-    (setf mutacao (random 10)) ;Sorteia um numero para verificar se haverá mutação
-    (setf gene_mutacao (random 2)) ;Escolhe qual gene irá sofrer mutação (0 ou 1)
-    (setf sinal_mutacao (random 2)) ;Escolhe se a mutação será positiva ou negativa
+    
+    ; Define sexo aleatoriamente
     (setf sexo (random 2))
-    (setf organismo3 (list (/ 2 (+ (first organismo1) (first organismo2))) (/ 2 (+ (second organismo1) (second organismo2))) sexo))
-    (if (equals sinal_mutacao 1)
-      (setf sinal_mutacao 1)
-      (setf sinal_mutacao -1)
-    )
+    
+    ; Calcula genes do filho (média dos pais)
+    (setf forca (round (/ (+ (first genes1) (first genes2)) 2)))
+    (setf eficiencia (round (/ (+ (second genes1) (second genes2)) 2)))
+    
+    ; Cria lista de genes do filho
+    (setf organismo3 (list forca eficiencia sexo))
+    
+    ; Define sinal da mutação
+    (if (equal sinal_mutacao 1)
+        (setf sinal_mutacao 1)
+        (setf sinal_mutacao -1))
+    
+    ; Aplica mutação se sorteada
+    (if (< mutacao taxa_mutacao)
+        (progn
+          (setf nova_quantidade_mutacao (* quantidade_mutacao sinal_mutacao))
+          (setf (nth gene_mutacao organismo3) 
+                (+ nova_quantidade_mutacao (nth gene_mutacao organismo3)))
+          ; Garante que os valores não sejam negativos
+          (when (< (nth gene_mutacao organismo3) 0)
+            (setf (nth gene_mutacao organismo3) 0))
+          ; Garante que eficiência não passe de 100
+          (when (and (= gene_mutacao 1) (> (nth gene_mutacao organismo3) 100))
+            (setf (nth gene_mutacao organismo3) 100))))
+    
+    ; Calcula posição do filho (média das posições dos pais)
+    (let ((pos_x (/ (+ (first pos1) (first pos2)) 2))
+          (pos_y (/ (+ (second pos1) (second pos2)) 2)))
+      
+      ; Retorna o organismo filho completo: (ID, genes, posição, energia)
+      (list id organismo3 (list pos_x pos_y) 30)))) ; Energia inicial de 50
 
-    (if < mutacao taxa_mutacao
-      (progn
-       (setf nova_quantidade_mutacao (* nova_quantidade_mutacao sinal_mutacao))
-       (setf (nth gene_mutacao organismo3) (+ nova_quantidade_mutacao (nth gene_mutacao organismo3)))
-      )
-    )
-    organismo3
-  )
-)
+
+
+
+;; Calcula distância Euclidiana
+(defun distancia (p1 p2)
+    (sqrt (+ (expt (- (first p1) (first p2)) 2)
+             (expt (- (second p1) (second p2)) 2))))
 
 ;Função para executar simulação
 ;Em cada iteração, o organismo pode procurar por recursos ou reproduzir | 0 = Reproducao, 1 = Procurar recurso
+;Para que ele reproduza, a femea que ele encontrou precisa querer reproduzir também, se não ele vai para proxima
+;Caso dois ou mais machos querem reproduzir com a mesma fêmea, deverá haver competição
 ;Reproduzir gasta 10 de energia
 ;Procurar por recurso gasta 
 ;   10 - Se eficiencia <= 40
@@ -176,33 +230,77 @@
 ;Se dois ou mais individuos buscarem pelo mesmo recurso, eles devem competir, o com a maior força ganha o recurso
 ;Cada recurso aumenta em 8 a energia 
 ;Se um individuo tiver energia <= 10, obrigatoriamente deve procurar recurso 
+;; Função auxiliar para calcular a distância entre dois pontos
+
 (defun executar_simulacao (ambiente organismos recursos)
-  (let ((rodadas 0))
-    (format t "~%~%Quantas rodadas? ")
-    (setf rodadas (read))
-    (dotimes (i rodadas)
-      (let (decisao_organismos 0) (recurso_organismos nil) (reproducao_organismos nil)
-        (let ((decisao nil))
-          (dolist (organismo organismos)
-            (if (<= 10 (nth 3 organismo))
-              (setf decisao 1)
-              (setf decisao (random 2))
-            )
-            (setf decisao_organismos (append decisao_organismos (list decisao)))
-          )
-          (dotimes (i (length decisao_organismos))
-            (if (equals (nth i decisao_organismos) 0)
-              (progn ; Código macho busca fêmea mais próxima que quer reproduzir 
-
-              ) 
-              (progn ; Código busca recurso mais próximo
-
-           
-              )             
-            )
-          )
-        )
-      )
-    )
-  ) 
-)
+  (format t "~%Digite o número de rodadas: ")
+  (let ((rodadas (read))
+        (org-atuais organismos)
+        (rec-atuais recursos))
+    (loop for r from 1 to rodadas do
+      (format t "~%=== Rodada ~A ===~%" r)
+      
+      (let ((novos-org nil))
+        ;; Para cada organismo
+        (dolist (org org-atuais)
+          (let* ((energia    (fourth org))
+                 (genes      (second org))
+                 (sexo       (nth 2 genes))
+                 (eficiencia (second genes))
+                 (decisao    (if (<= energia 10) 1 (random 2))))
+            
+            (if (= decisao 1)
+                ;; Buscar recurso
+                (let ((melhor nil) (dmin nil))
+                  (dolist (rc rec-atuais)
+                    (let* ((pos-org (third org))
+                           (pos-rc  (second rc))
+                           (d       (distancia pos-org pos-rc)))
+                      (when (or (not dmin) (< d dmin))
+                        (setf dmin d
+                              melhor rc))))
+                  
+                  ;; Gasta energia pela tentativa de buscar (independente de encontrar)
+                  (decf energia (cond ((<= eficiencia 40) 10)
+                                     ((<= eficiencia 80) 7)
+                                     (t 5)))
+                  
+                  ;; Se encontrou recurso, consome e ganha energia
+                  (when melhor
+                    (setf rec-atuais (remove melhor rec-atuais :test #'equal))
+                    (incf energia 8))
+                  
+                  (setf (fourth org) energia))
+              ;; Reproduzir
+              (when (= sexo 1)
+                (let ((fem  nil) (dmin2 nil))
+                  (dolist (pot org-atuais)
+                    (let* ((g2  (second pot))
+                           (s2  (nth 2 g2))
+                           (e2  (fourth pot)))
+                      (when (and (= s2 0) (>= e2 20))
+                        (let ((d2 (distancia (third org) (third pot))))
+                          (when (or (not dmin2) (< d2 dmin2))
+                            (setf dmin2 d2
+                                  fem pot))))))
+                  (when fem
+                    (let ((filho (reproduzir ambiente org fem)))
+                      (push filho novos-org)
+                      (decf (fourth org) 10)
+                      (decf (fourth fem) 10))))))))
+        
+        ;; Atualiza organismos e recursos no fim da rodada
+        (setf org-atuais (append
+                           (remove-if (lambda (o) (<= (fourth o) 0))
+                                      org-atuais)
+                           novos-org))
+        
+        ;; Atualiza recursos adicionando novos (chamando sua função)
+        (multiple-value-setq (ambiente rec-atuais)
+          (adicionar_recursos_rodada ambiente rec-atuais)))
+      
+      (format t "~%Fim da rodada ~A. Organismos vivos: ~A, Recursos restantes: ~A~%" 
+              r (length org-atuais) (length rec-atuais)))
+    
+    ;; Retorna os valores atualizados após todas as rodadas
+    (values ambiente org-atuais rec-atuais)))
