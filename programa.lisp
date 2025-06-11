@@ -3,15 +3,20 @@
  SISTEMA DE SIMULAÇÃO DE EVOLUÇÃO EM AMBIENTES VIRTUAIS
  Linguagens e paradigmas de programação - Trabalho1 - Lisp
  Autores: 
+  Daniel Natan dos Santos Brito - N: 15446902
+  Mikahel Lazarev Nogueira Barbosa - N: 15480495
+  Francisco Eduardo Fontenele - N: 15452569
  Tema 14: Simulação de Evolução em Ambientes Virtuais
  ======================================================
 |#
 
-;Ambiente
+;Estruturas utilizadas: 
+
+;Ambiente: 
 ;Tamanho do ambiente, Ultimo id de recursos, Ultimo id organismo
 
-;Organismo
-;IdOrganismo, Genes, Posição, Energia 
+;Organismo:
+;IdOrganismo, (Genes), Posição, Energia 
 ;Genes - Força (Para competir por comida), Eficiencia para achar alimento, Sexo(1 - Masculino, 0 - Feminino)
 
 ;Recurso
