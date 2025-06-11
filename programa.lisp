@@ -81,7 +81,7 @@
 (defun gerar_organismo(ambiente)
   (let ((organismo nil) (id (+ 1 (nth 2 ambiente))) (genes nil) (posicao (list (random (nth 0 ambiente)) (random (nth 0 ambiente)))))
     (setf genes (gerar_genes))
-    (setf organismo (list id genes posicao 30)) ;50 seria a energia base, que todos os indivíduos nascem
+    (setf organismo (list id genes posicao 30)) ;30 seria a energia base, que todos os indivíduos nascem
     organismo
   )
 )
@@ -103,6 +103,7 @@
     (format t "Simulação resetada!~%")
     (values ambiente organismos recursos)))
 
+;Função para adicionar recursos no começo do início do programa
 (defun adicionar_recursos(ambiente organismos recursos)
   (if (= (first ambiente) 0)
       (progn
@@ -123,7 +124,7 @@
                   (setf (nth 1 ambiente) (+ quantidade (nth 1 ambiente))))
           (values ambiente organismos recursos))))
 
-
+;Em cada rodada é gerado uma quantidade de recursos proporcional ao tamanho do ambiente
 (defun adicionar_recursos_rodada(ambiente recursos)
   (let ((quantidade (round (/ (first ambiente) 10)))
       (id (second ambiente)))
@@ -202,12 +203,12 @@
           (when (and (= gene_mutacao 1) (> (nth gene_mutacao organismo3) 100))
             (setf (nth gene_mutacao organismo3) 100))))
     
-    ; Calcula posição do filho (média das posições dos pais)
-    (let ((pos_x (/ (+ (first pos1) (first pos2)) 2))
-          (pos_y (/ (+ (second pos1) (second pos2)) 2)))
+    ; Calcula posição do filho (Posição da mãe)
+    (let ((pos_x (first pos1))
+          (pos_y (second pos1)))
       
       ; Retorna o organismo filho completo: (ID, genes, posição, energia)
-      (list id organismo3 (list pos_x pos_y) 30)))) ; Energia inicial de 50
+      (list id organismo3 (list pos_x pos_y) 30)))) ; Energia inicial de 30
 
 
 
@@ -240,12 +241,17 @@
         (rec-atuais recursos))
     (loop for r from 1 to rodadas do
       (format t "~%=== RODADA ~A ===" r)
+
+      ;Gera as decisões dos organismos
       (let ((decisoes nil))
         (dolist (organismo organismos-atuais)
-          (if (<= (fourth organismo) 10)
+          (if (<= (fourth organismo) 10) ;Se a energia for menor que 10, o organismo obrigatoriamente busca recurso
             (setf decisoes (append decisoes (list 1)))
             (setf decisoes (append decisoes (list (random 2))))))
         
+        ;Gera a lista de organismos para cada recurso para fazer a competição entre recursos
+        ;O organismo com a maior força para cada recurso consegue a energia do recurso
+        ;Todos os organismos perdem energia de acordo com sua eficiencia mesmo se conseguiram recursos ou nao
         (let ((organismo-recurso nil) (recursos-competidos nil))
           (dotimes (i (length organismos-atuais))
             (if (= 1 (nth i decisoes))
@@ -299,6 +305,7 @@
                         (incf (fourth (nth i organismos-atuais)) 8)))))))) 
         
         ;; Reprodução
+        ;;Busca a fêmea mais proxima que quer reproduzir
         (let ((quantidade_de_organismos (length organismos-atuais)))
           (dotimes (i quantidade_de_organismos)
               (when (and (numberp (nth i decisoes))
@@ -311,7 +318,7 @@
                     (indice_femea -1))
                 (dotimes (j quantidade_de_organismos)
                   (if (and (= 0 (third (second (nth j organismos-atuais)))) ;; Fêmea
-                           (= 0 (nth j decisoes))) ;; Não foi buscar comida
+                           (= 0 (nth j decisoes))) ;; Quer reproduzir
                     (progn
                       (setf distancia_atual (distancia (third (nth i organismos-atuais)) 
                                                      (third (nth j organismos-atuais))))
@@ -326,7 +333,6 @@
                   (decf (fourth (nth i organismos-atuais)) 10)
                   (decf (fourth (nth indice_femea organismos-atuais)) 10)
                   (setf filho_gerado (reproduzir ambiente femea_mais_proxima (nth i organismos-atuais))) 
-                  (format t "~% ~A ~%" filho_gerado)
                   (setf organismos-atuais (append organismos-atuais (list filho_gerado))) 
                   )
                 )))) 
